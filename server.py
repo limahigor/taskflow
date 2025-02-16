@@ -83,8 +83,13 @@ def list_users(db: Session = Depends(get_db)):
     return users
 
 @app.post("/tasks/", response_model=TaskResponse)
-async def create_task(task: TaskCreate, db: Session = Depends(get_db)):
+async def create_task(request: Request, db: Session = Depends(get_db)):
     try:
+        task_data = await request.json()
+        print(task_data)
+        task = TaskCreate(**task_data)
+        print(task)
+        
         user = db.query(User).filter(User.id == task.user_id).first()
         
         if not user:
@@ -105,6 +110,8 @@ async def create_task(task: TaskCreate, db: Session = Depends(get_db)):
         user_response = UserResponse(id=user.id, name=user.name, email=user.email)
 
         db.close()
+    except ValidationError:
+        raise HTTPException(status_code=400, detail="Invalid request data")
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception:
