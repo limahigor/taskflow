@@ -36,6 +36,10 @@ def task_data():
     return {"title": "Simple task", "description": "A simple test task", "user_id": "1"}
 
 @pytest.fixture
+def task_missing_data():
+    return {"description": "A simple test task", "user_id": "1"}
+
+@pytest.fixture
 def user_data():
     return {"name": "Higor", "email": "higor@higor.com"}
 
@@ -68,4 +72,9 @@ class TestTasksPostRoute:
         """ Should returns 400 if user not exists """       
         response = client.post("/tasks/", json=task_data)
         
+        assert response.status_code == 400
+        
+    def test_create_user_missing_data(self, task_missing_data):
+        """ Should return 400 if missing data is provided """
+        response = client.post("/tasks/", json=task_missing_data)
         assert response.status_code == 400
