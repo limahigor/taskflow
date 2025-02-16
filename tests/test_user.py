@@ -39,7 +39,15 @@ def user_data():
 def missing_user_data():
     return {"name": "Higor"}
 
-class TestUserRoutes:
+@pytest.fixture
+def user_create_get_data():
+    return [
+        { "name": "higor","email": "higor@higor.com" },
+        { "name": "higor2", "email": "higor2@higor.com" },
+        { "name": "higor3", "email": "higor3@higor.com" }
+    ]
+
+class TestUserPostRoute:
     def test_create_user(self, user_data):
         """ Should create user with correct data """
         response = client.post("/users/", json=user_data)
@@ -56,3 +64,21 @@ class TestUserRoutes:
         client.post("/users/", json=user_data)
         response = client.post("/users/", json=user_data)
         assert response.status_code == 400
+        
+class TestUserGetRoutes:
+    def test_get_user(self, user_create_get_data):
+        """ Should return all users list """
+        
+        for user in user_create_get_data:
+            response = client.post("/users/", json=user)
+            assert response.status_code == 200
+
+        response = client.get("/users/")
+        assert response.status_code == 200
+
+        users_response = response.json()
+        print(users_response)
+        assert len(users_response) == 3
+        
+        users_returned = [{"name": u["name"], "email": u["email"]} for u in users_response]
+        assert sorted(user_create_get_data, key=lambda x: x["email"]) == sorted(users_returned, key=lambda x: x["email"])
