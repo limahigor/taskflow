@@ -50,6 +50,15 @@ class TaskResponse(BaseModel):
     status: str
     user: UserResponse
     
+class TaskUpdate(BaseModel):
+    status: int
+    
+STATUS_MAP = {
+    0: "pendent",
+    1: "on going",
+    2: "completed"
+}
+    
 def get_db():
     db = SessionLocal()
     try:
@@ -73,6 +82,8 @@ async def create_user(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="User already exists")
     except Exception:
         raise HTTPException(status_code=500)
+    finally:
+        db.close()
         
     return user
 
@@ -93,7 +104,6 @@ async def create_task(request: Request, db: Session = Depends(get_db)):
         user = db.query(User).filter(User.id == task.user_id).first()
         
         if not user:
-            db.close()
             raise ValueError("User not exists")
         
         db_task = Task(
@@ -108,13 +118,38 @@ async def create_task(request: Request, db: Session = Depends(get_db)):
         db.refresh(db_task)
         
         user_response = UserResponse(id=user.id, name=user.name, email=user.email)
-
-        db.close()
     except ValidationError:
         raise HTTPException(status_code=400, detail="Invalid request data")
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception:
         raise HTTPException(status_code=500)
+    finally:
+        db.close()
         
     return TaskResponse(id=db_task.id, title=db_task.title, description=db_task.description, status=db_task.status, user=user_response)
+
+@app.put("/tasks/{task_id}", response_model=TaskResponse)
+async def update_task_status(task_id: int, request: Request, db: Session = Depends(get_db)):
+    try:
+        task_data = await request.json()
+        task_update = TaskUpdate(**task_data)
+        db_task = db.query(Task).filter(Task.id == task_id).first()
+        
+        if not db_task:
+            raise ValueError("Task not found")
+
+        if task_update.status not in STATUS_MAP:
+            raise ValueError("Invalid status code")
+
+        db_task.status = STATUS_MAP[task_update.status]
+        db.commit()
+        db.refresh(db_task)
+
+        return db_task
+    except ValidationError:
+        raise HTTPException(status_code=400, detail="Invalid request data")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=500, detail="Internal Server Error")
