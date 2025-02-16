@@ -157,6 +157,6 @@ async def update_task_status(task_id: int, request: Request, db: Session = Depen
 @app.get("/tasks/", response_model=List[TaskResponse])
 def list_tasks(db: Session = Depends(get_db)):
     tasks = db.query(Task).all()
-    task_list = [TaskResponse(id=t.id, title=t.title, description=t.description, status=t.status, user=UserResponse(id=t.id,name=t.user.name, email=t.user.email)) for t in tasks]
+    task_list = [TaskResponse(id=t.id, title=t.title, description=t.description, status=t.status, user=UserResponse(id=t.user_id,name=t.user.name, email=t.user.email)) for t in tasks]
     db.close()
     return task_list

@@ -2,3 +2,4 @@
 .taskflow
 test/
 __pycache__
+.json
