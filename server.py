@@ -15,6 +15,16 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     name = Column(String, index=True)
     email = Column(String, unique=True, index=True)
+    tasks = relationship("Task", back_populates="user")
+    
+class Task(Base):
+    __tablename__ = "tasks"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    title = Column(String, index=True)
+    description = Column(String)
+    status = Column(String, default="pendent")
+    user_id = Column(Integer, ForeignKey("users.id"))
+    user = relationship("User", back_populates="tasks")
 
 Base.metadata.create_all(bind=engine)
 app = FastAPI()
@@ -26,7 +36,19 @@ class UserCreate(BaseModel):
 class UserResponse(BaseModel):
     id: int
     name: str
-    email: str
+    email: str    
+
+class TaskCreate(BaseModel):
+    title: str
+    description: str
+    user_id: int
+
+class TaskResponse(BaseModel):
+    id: int
+    title: str
+    description: str
+    status: str
+    user: UserResponse
     
 def get_db():
     db = SessionLocal()
@@ -53,8 +75,27 @@ async def create_user(request: Request, db: Session = Depends(get_db)):
     return user
 
 @app.get("/users/", response_model=List[UserResponse])
-def list_users():
-    db = SessionLocal()
+def list_users(db: Session = Depends(get_db)):
     users = db.query(User).all()
     db.close()
     return users
+
+@app.post("/tasks/", response_model=TaskResponse)
+async def create_task(task: TaskCreate, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == task.user_id).first()
+    
+    db_task = Task(
+        title=task.title,
+        description=task.description,
+        status="pendent",
+        user_id=task.user_id
+    )
+    
+    db.add(db_task)
+    db.commit()
+    db.refresh(db_task)
+    
+    user_response = UserResponse(id=user.id, name=user.name, email=user.email)
+
+    db.close()
+    return TaskResponse(id=db_task.id, title=db_task.title, description=db_task.description, status=db_task.status, user=user_response)
