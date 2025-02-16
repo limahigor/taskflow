@@ -57,6 +57,14 @@ def expected_response():
                 }
             }
     
+@pytest.fixture
+def created_task(user_data, task_data):
+    user_response = client.post("/users/", json=user_data)
+    assert user_response.status_code == 200
+
+    response = client.post("/tasks/", json=task_data)
+    assert response.status_code == 200
+    
 class TestTasksPostRoute:
     def test_create_task(self, task_data, user_data, expected_response):
         """ Should create Task with correct data """
@@ -77,4 +85,33 @@ class TestTasksPostRoute:
     def test_create_user_missing_data(self, task_missing_data):
         """ Should return 400 if missing data is provided """
         response = client.post("/tasks/", json=task_missing_data)
+        assert response.status_code == 400
+        
+class TestTasksPutRoute:
+    def test_update_task_status(self, created_task):
+       
+        """ Should update task status successfully """
+        response = client.put("/tasks/1", json={"status": 1})
+        
+        assert response.status_code == 200
+        assert response.json()["status"] == "on going"
+        
+    def test_update_task_invalid_status(self, created_task):
+        """ Should return 400 if invalid status is provided """
+        
+        response = client.put("/tasks/1", json={"status": 5})
+        
+        assert response.status_code == 400
+        assert response.json()["detail"] == "Invalid status code"
+
+    def test_update_task_not_found(self):
+        """ Should return 400 if task does not exist """
+        response = client.put("/tasks/99999", json={"status": 1})
+        
+        assert response.status_code == 400
+        assert response.json()["detail"] == "Task not found"
+        
+    def test_update_task_missing_data(self):
+        """ Should return 400 if missing data is provided """
+        response = client.put("/tasks/")
         assert response.status_code == 400
