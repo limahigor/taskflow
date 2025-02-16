@@ -42,7 +42,7 @@ def missing_user_data():
 @pytest.fixture
 def user_create_get_data():
     return [
-        { "name": "higor","email": "higor@higor.com" },
+        { "name": "higor1","email": "higor1@higor.com" },
         { "name": "higor2", "email": "higor2@higor.com" },
         { "name": "higor3", "email": "higor3@higor.com" }
     ]
