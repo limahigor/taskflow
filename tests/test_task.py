@@ -61,8 +61,11 @@ class TestTasksPostRoute:
         
         response = client.post("/tasks/", json=task_data)
         
-        test = response.json()
-        
-        print(test)
         assert response.status_code == 200
         assert response.json() == expected_response
+        
+    def test_create_task_user_not_exists(self, task_data):
+        """ Should returns 400 if user not exists """       
+        response = client.post("/tasks/", json=task_data)
+        
+        assert response.status_code == 400
