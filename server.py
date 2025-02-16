@@ -71,7 +71,9 @@ async def create_user(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Invalid request data")
     except IntegrityError:
         raise HTTPException(status_code=400, detail="User already exists")
-    
+    except Exception:
+        raise HTTPException(status_code=500)
+        
     return user
 
 @app.get("/users/", response_model=List[UserResponse])
@@ -82,20 +84,30 @@ def list_users(db: Session = Depends(get_db)):
 
 @app.post("/tasks/", response_model=TaskResponse)
 async def create_task(task: TaskCreate, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == task.user_id).first()
-    
-    db_task = Task(
-        title=task.title,
-        description=task.description,
-        status="pendent",
-        user_id=task.user_id
-    )
-    
-    db.add(db_task)
-    db.commit()
-    db.refresh(db_task)
-    
-    user_response = UserResponse(id=user.id, name=user.name, email=user.email)
+    try:
+        user = db.query(User).filter(User.id == task.user_id).first()
+        
+        if not user:
+            db.close()
+            raise ValueError("User not exists")
+        
+        db_task = Task(
+            title=task.title,
+            description=task.description,
+            status="pendent",
+            user_id=task.user_id
+        )
+        
+        db.add(db_task)
+        db.commit()
+        db.refresh(db_task)
+        
+        user_response = UserResponse(id=user.id, name=user.name, email=user.email)
 
-    db.close()
+        db.close()
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=500)
+        
     return TaskResponse(id=db_task.id, title=db_task.title, description=db_task.description, status=db_task.status, user=user_response)
