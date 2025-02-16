@@ -153,3 +153,10 @@ async def update_task_status(task_id: int, request: Request, db: Session = Depen
         raise HTTPException(status_code=400, detail=str(e))
     except Exception:
         raise HTTPException(status_code=500, detail="Internal Server Error")
+    
+@app.get("/tasks/", response_model=List[TaskResponse])
+def list_tasks(db: Session = Depends(get_db)):
+    tasks = db.query(Task).all()
+    task_list = [TaskResponse(id=t.id, title=t.title, description=t.description, status=t.status, user=UserResponse(id=t.id,name=t.user.name, email=t.user.email)) for t in tasks]
+    db.close()
+    return task_list
