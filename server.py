@@ -1,7 +1,7 @@
-from fastapi import FastAPI, HTTPException, Depends
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException, Request
+from pydantic import BaseModel, ValidationError
 from sqlalchemy import create_engine, Column, Integer, String, ForeignKey
-from sqlalchemy.orm import sessionmaker, Session, declarative_base, relationship
+from sqlalchemy.orm import sessionmaker, declarative_base, relationship
 
 DATABASE_URL = "sqlite:///db.sqlite3"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
@@ -22,7 +22,13 @@ class UserCreate(BaseModel):
     email: str
 
 @app.post("/users/", response_model=UserCreate)
-def create_user(user: UserCreate):
+async def create_user(request: Request):
+    try:
+        user_data = await request.json()
+        user = UserCreate(**user_data)
+    except ValidationError:
+        raise HTTPException(status_code=400, detail="Invalid request data")
+    
     db = SessionLocal()
     db_user = User(name=user.name, email=user.email)
     db.add(db_user)
